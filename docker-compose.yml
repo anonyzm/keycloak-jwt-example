@@ -1,0 +1,99 @@
+services:
+  # Keycloak (Identity Provider)
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: keycloak
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: password
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: keycloak.local
+    volumes:
+      - ./docker/keycloak/realm.json:/opt/keycloak/data/import/realm.json
+      - ./docker/keycloak/keycloak.conf:/opt/keycloak/conf/keycloak.conf
+    command: ["start-dev", "--import-realm"]
+    ports:
+      - "8080:8080"
+    depends_on:
+      - keycloak-db
+    networks:
+      - auth-net
+
+  # PostgreSQL для Keycloak
+  keycloak-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+    volumes:
+      - keycloak-db-data:/var/lib/postgresql/data
+    networks:
+      - auth-net
+
+  # Init backend cahe/logspermissions
+  init_permissions:
+    image: busybox 
+    volumes:
+      - logs_volume:/logs
+      - cache_volume:/cache
+    command: chmod -R 775 /logs && chmod -R 775 /cache
+  # PHP Backend (SMS-аутентификация + API)
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    ports:
+      - "80:80"
+    volumes:
+      - ./backend:/opt/app
+      - cache_volume:/opt/app/cache
+      - logs_volume:/opt/app/logs
+    environment:
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=myrealm
+      - KEYCLOAK_CLIENT_ID=backend-client
+      - KEYCLOAK_CLIENT_SECRET=your-client-secret
+    restart: unless-stopped
+    depends_on:
+      - init_permissions
+      - keycloak
+    networks:
+      - auth-net
+
+  # Envoy Proxy (API Gateway)
+  envoy:
+    image: envoyproxy/envoy:v1.29-latest
+    container_name: envoy
+    volumes:
+      - ./docker/envoy/envoy.yaml:/etc/envoy/envoy.yaml
+    ports:
+      - "8081:8081"
+      - "9901:9901" # Admin interface
+    depends_on:
+      - backend
+      - keycloak
+    networks:
+      - auth-net
+
+  # Фронтенд (опционально, для тестов)
+  # frontend:
+  #   image: nginx:alpine
+  #   ports:
+  #     - "3000:80"
+  #   volumes:
+  #     - ./frontend:/usr/share/nginx/html
+  #   networks:
+  #     - auth-net
+
+volumes:
+  keycloak-db-data:
+  cache_volume:    
+  logs_volume:
+
+networks:
+  auth-net:
+    driver: bridge

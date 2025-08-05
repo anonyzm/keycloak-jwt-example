@@ -1,0 +1,85 @@
+static_resources:
+  listeners:
+  - name: http_listener
+    address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 8081
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: ingress_http
+          route_config:
+            name: local_route
+            virtual_hosts:
+            - name: backend
+              domains: ["*"]
+              routes:
+              - match:
+                  prefix: "/api"
+                route:
+                  cluster: backend
+                  prefix_rewrite: "/"
+          http_filters:
+          - name: envoy.filters.http.jwt_authn
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+              providers:
+                keycloak:
+                  issuer: http://keycloak:8080/realms/myrealm
+                  audiences:
+                  - backend-client
+                  forward: true
+                  remote_jwks:
+                    http_uri:
+                      uri: http://keycloak:8080/realms/myrealm/protocol/openid-connect/certs
+                      cluster: keycloak
+                      timeout: 5s
+                    cache_duration:
+                      seconds: 300
+                  payload_in_metadata: keycloak
+              rules:
+              - match:
+                  prefix: "/api/auth"
+                requires:
+                  provider_name: keycloak
+          
+          # Критично важный терминальный фильтр router
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+  clusters:
+  - name: backend
+    connect_timeout: 5s
+    type: STRICT_DNS
+    load_assignment:
+      cluster_name: backend
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: backend
+                port_value: 80
+
+  - name: keycloak
+    connect_timeout: 5s
+    type: STRICT_DNS
+    load_assignment:
+      cluster_name: keycloak
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: keycloak
+                port_value: 8080
+
+admin:
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 9901

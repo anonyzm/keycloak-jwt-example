@@ -1,0 +1,23 @@
+# Запрос кода
+request_code:
+    path: c
+    controller: App\Controller\AuthController::requestCode
+    methods: [POST]
+    defaults:
+        _format: json
+
+# Логин
+login:
+    path: /api/auth/login
+    controller: App\Controller\AuthController::login
+    methods: [POST]
+    defaults:
+        _format: json
+
+# Hello World
+hello_world:
+    path: /api/protected/hello-world
+    controller: App\Controller\IndexController::helloWorld
+    methods: [GET]
+    defaults:
+        _format: html

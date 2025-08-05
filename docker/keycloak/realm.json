@@ -1,0 +1,45 @@
+{
+    "realm": "myrealm",
+    "enabled": true,
+    "clients": [
+      {
+        "clientId": "backend-client",
+        "enabled": true,
+        "publicClient": false,
+        "secret": "your-client-secret",
+        "directAccessGrantsEnabled": true,
+        "serviceAccountsEnabled": true,
+        "authorizationServicesEnabled": true,
+        "attributes": {
+          "access.token.lifespan": "300"
+        },
+        "protocolMappers": [
+          {
+            "name": "phone",
+            "protocol": "openid-connect",
+            "protocolMapper": "oidc-usermodel-attribute-mapper",
+            "config": {
+              "user.attribute": "phone",
+              "claim.name": "phone_number",
+              "jsonType.label": "String"
+            }
+          }
+        ]
+      }
+    ],
+    "users": [
+      {
+        "username": "+79123456789",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "SMS_AUTH_ONLY"
+          }
+        ],
+        "attributes": {
+          "phone": "+79123456789"
+        }
+      }
+    ]
+  }

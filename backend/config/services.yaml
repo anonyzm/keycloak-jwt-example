@@ -1,0 +1,16 @@
+# Конфигурация сервисов
+services:
+    # Конфигурация по умолчанию для сервисов в папке src/
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: false
+
+    # Регистрируем все контроллеры как публичные сервисы
+    App\Controller\:
+        resource: '../src/Controller/'
+        public: true
+        tags: ['controller.service_arguments']
+
+    App\Service\:
+        resource: '../src/Service/'

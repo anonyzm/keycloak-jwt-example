@@ -1,0 +1,51 @@
+<?php
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\RequestContext;
+use Symfony\Component\Routing\Matcher\UrlMatcher;
+use Symfony\Component\HttpKernel\HttpKernel;
+use Symfony\Component\HttpKernel\Controller\ContainerControllerResolver;
+use Symfony\Component\EventDispatcher\EventDispatcher;
+use App\Kernel\Kernel;
+
+// Создаем Kernel и загружаем контейнер
+$kernel = new Kernel('dev', true);
+$kernel->boot();
+$container = $kernel->getContainer();
+
+// Загружаем маршруты из YAML файла
+$routes = $kernel->loadRoutes();
+
+// Создаем контекст запроса
+$context = new RequestContext();
+$context->fromRequest(Request::createFromGlobals());
+
+// Создаем матчер URL
+$matcher = new UrlMatcher($routes, $context);
+
+// Создаем резолвер контроллеров с поддержкой контейнера
+$resolver = new ContainerControllerResolver($container);
+
+// Создаем диспетчер событий
+$dispatcher = new EventDispatcher();
+
+// Создаем HTTP Kernel
+$httpKernel = new HttpKernel($dispatcher, $resolver);
+
+// Обрабатываем запрос
+$request = Request::createFromGlobals();
+
+try {
+    $parameters = $matcher->match($request->getPathInfo());
+    $request->attributes->add($parameters);
+    
+    $response = $httpKernel->handle($request);
+} catch (Exception $e) {
+    $response = new Response('Page not found: ' . $e->getMessage(), 404);
+}
+
+$response->send();
+$httpKernel->terminate($request, $response); 
