@@ -1,15 +1,27 @@
 {
     "realm": "myrealm",
     "enabled": true,
+    "registrationEmailAsUsername": false,
+    "editUsernameAllowed": true,
+    "loginWithEmailAllowed": false,
+    "requiredCredentials": ["password"],
+    "registrationAllowed": false,
+    "resetPasswordAllowed": false,
+    "verifyEmail": false,
+  
     "clients": [
       {
         "clientId": "backend-client",
+        "protocol": "openid-connect",
+        "clientAuthenticatorType": "client-secret",
         "enabled": true,
         "publicClient": false,
         "secret": "your-client-secret",
         "directAccessGrantsEnabled": true,
         "serviceAccountsEnabled": true,
         "authorizationServicesEnabled": true,
+        "standardFlowEnabled": false,
+        "implicitFlowEnabled": false,
         "attributes": {
           "access.token.lifespan": "300"
         },
@@ -21,25 +33,103 @@
             "config": {
               "user.attribute": "phone",
               "claim.name": "phone_number",
-              "jsonType.label": "String"
+              "jsonType.label": "String",
+              "id.token.claim": "true",
+              "access.token.claim": "true",
+              "userinfo.token.claim": "true"
             }
           }
         ]
       }
     ],
+  
+    "authenticationFlows": [
+      {
+        "alias": "browser",
+        "description": "browser based authentication",
+        "providerId": "basic-flow",
+        "topLevel": true,
+        "builtIn": true,
+        "authenticationExecutions": [
+          {
+            "authenticator": "auth-username-password-form",
+            "requirement": "REQUIRED",
+            "priority": 10,
+            "userSetupAllowed": false
+          }
+        ]
+      }
+    ],
+  
+    "requiredActions": [
+      {
+        "alias": "CONFIGURE_TOTP",
+        "name": "Configure OTP",
+        "providerId": "CONFIGURE_TOTP",
+        "enabled": false,
+        "defaultAction": false,
+        "priority": 0
+      },
+      {
+        "alias": "terms_and_conditions",
+        "name": "Terms and Conditions",
+        "providerId": "terms_and_conditions",
+        "enabled": false,
+        "defaultAction": false,
+        "priority": 1
+      },
+      {
+        "alias": "UPDATE_PASSWORD",
+        "name": "Update Password",
+        "providerId": "UPDATE_PASSWORD",
+        "enabled": false,
+        "defaultAction": false,
+        "priority": 2
+      },
+      {
+        "alias": "UPDATE_PROFILE",
+        "name": "Update Profile",
+        "providerId": "UPDATE_PROFILE",
+        "enabled": false,
+        "defaultAction": false,
+        "priority": 3
+      },
+      {
+        "alias": "VERIFY_EMAIL",
+        "name": "Verify Email",
+        "providerId": "VERIFY_EMAIL",
+        "enabled": false,
+        "defaultAction": false,
+        "priority": 4
+      }
+    ],
+  
     "users": [
+      {
+        "username": "service-account-backend-client",
+        "enabled": true,
+        "serviceAccountClientId": "backend-client",
+        "realmRoles": [],
+        "clientRoles": {
+          "realm-management": ["query-users", "view-users"]
+        }
+      },
       {
         "username": "+79123456789",
         "enabled": true,
+        "email": "+79123456789@temp.domain",
+        "emailVerified": true,
         "credentials": [
           {
             "type": "password",
-            "value": "SMS_AUTH_ONLY"
+            "value": "SMS_AUTH_ONLY",
+            "temporary": false
           }
         ],
         "attributes": {
           "phone": "+79123456789"
-        }
+        },
+        "requiredActions": []
       }
     ]
   }

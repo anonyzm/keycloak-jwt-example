@@ -1,6 +1,6 @@
 # Запрос кода
 request_code:
-    path: c
+    path: /api/auth/request-code
     controller: App\Controller\AuthController::requestCode
     methods: [POST]
     defaults:

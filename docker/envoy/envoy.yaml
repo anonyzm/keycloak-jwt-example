@@ -18,10 +18,21 @@ static_resources:
               domains: ["*"]
               routes:
               - match:
-                  prefix: "/api"
+                  path: "/api/auth/request-code"
                 route:
                   cluster: backend
-                  prefix_rewrite: "/"
+              - match:
+                  path: "/api/auth/login"
+                route:
+                  cluster: backend
+              - match:
+                  path: "/api/protected/hello-world"
+                route:
+                  cluster: backend
+                metadata:
+                  filter_metadata:
+                    envoy.filters.http.jwt_authn:
+                      provider_name: keycloak
           http_filters:
           - name: envoy.filters.http.jwt_authn
             typed_config:
@@ -42,11 +53,15 @@ static_resources:
                   payload_in_metadata: keycloak
               rules:
               - match:
-                  prefix: "/api/auth"
+                  path: "/api/protected/hello-world"
                 requires:
                   provider_name: keycloak
-          
-          # Критично важный терминальный фильтр router
+              - match:
+                  path: "/api/auth/request-code"
+                requires: {}  # empty object means no authentication is required
+              - match:
+                  path: "/api/auth/login"
+                requires: {}  # empty object means no authentication is required
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
