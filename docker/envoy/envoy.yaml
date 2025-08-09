@@ -36,8 +36,6 @@ static_resources:
               providers:
                 keycloak:
                   issuer: http://keycloak:8080/realms/myrealm
-                  audiences:
-                  - backend-client
                   forward: true
                   remote_jwks:
                     http_uri:
