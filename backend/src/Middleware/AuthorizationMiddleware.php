@@ -23,7 +23,7 @@ class AuthorizationMiddleware
     {
         try {
             $requiredRoles = $this->getRequiredRoles($controllerClass, $methodName);
-            
+            var_dump($requiredRoles);
             // Если роли не требуются, доступ разрешен
             if (empty($requiredRoles)) {
                 return null;

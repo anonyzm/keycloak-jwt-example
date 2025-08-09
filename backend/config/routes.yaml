@@ -22,8 +22,6 @@ login:
     defaults:
         _format: json
 
-
-
 # Demo endpoints
 demo_public:
     path: /api/demo/public

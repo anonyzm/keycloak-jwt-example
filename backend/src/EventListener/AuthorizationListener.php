@@ -25,6 +25,7 @@ class AuthorizationListener
         
         // Проверяем, что это массив [объект, метод]
         if (!is_array($controller) || count($controller) !== 2) {
+            var_dump('asd');
             return;
         }
         
@@ -33,7 +34,7 @@ class AuthorizationListener
         
         // Получаем требуемые роли
         $requiredRoles = $this->getRequiredRoles($controllerClass, $methodName);
-        
+        var_dump($requiredRoles);
         // Если роли не требуются, пропускаем
         if (empty($requiredRoles)) {
             return;
