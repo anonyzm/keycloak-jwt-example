@@ -41,13 +41,24 @@ $httpKernel = new HttpKernel($dispatcher, $resolver);
 // Обрабатываем запрос
 $request = Request::createFromGlobals();
 
-try {
-    $parameters = $matcher->match($request->getPathInfo());
-    $request->attributes->add($parameters);
-    
-    $response = $httpKernel->handle($request);
-} catch (Exception $e) {
-    $response = new Response('Page not found: ' . $e->getMessage(), 404);
+// Обрабатываем OPTIONS запросы для API эндпоинтов до роутинга
+// OPTIONS запросы не должны проходить через JWT аутентификацию
+if ($request->getMethod() === 'OPTIONS' && str_starts_with($request->getPathInfo(), '/api/')) {
+    $response = new Response('', 204);
+    $response->headers->set('Access-Control-Allow-Origin', '*');
+    $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    $response->headers->set('Access-Control-Max-Age', '86400');
+    $response->headers->set('Access-Control-Allow-Credentials', 'false');
+} else {
+    try {
+        $parameters = $matcher->match($request->getPathInfo());
+        $request->attributes->add($parameters);
+        
+        $response = $httpKernel->handle($request);
+    } catch (Exception $e) {
+        $response = new Response('Page not found: ' . $e->getMessage(), 404);
+    }
 }
 
 $response->send();

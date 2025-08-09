@@ -9,6 +9,7 @@ use Symfony\Component\HttpKernel\Kernel as BaseKernel;
 use Symfony\Component\Routing\Loader\YamlFileLoader as RoutingYamlLoader;
 use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Config\FileLocator;
+use Nelmio\CorsBundle\NelmioCorsBundle;
 
 class Kernel extends BaseKernel
 {
@@ -51,24 +52,24 @@ class Kernel extends BaseKernel
         $container->setParameter('kernel.project_dir', $this->getProjectDir());
         $container->setParameter('kernel.cache_dir', $this->getCacheDir());
         $container->setParameter('kernel.logs_dir', $this->getLogDir());
-        
+
         // Загружаем сервисы из YAML
         $fileLocator = new FileLocator($this->getProjectDir() . '/config');
         $yamlLoader = new YamlFileLoader($container, $fileLocator);
         $yamlLoader->load('services.yaml');
-        
+                
         return $container;
     }
     
     public function registerEventListeners($dispatcher, $container): void
     {
+        // API CORS Listener - высокий приоритет для обработки OPTIONS
+        $corsListener = $container->get('App\EventListener\ApiCorsListener');
+        $dispatcher->addListener('kernel.request', [$corsListener, 'onKernelRequest'], 250);
+        $dispatcher->addListener('kernel.response', [$corsListener, 'onKernelResponse'], -250);
+        
         // Authorization Listener
         $authListener = $container->get('App\EventListener\AuthorizationListener');
         $dispatcher->addListener('kernel.controller', [$authListener, 'onKernelController'], 10);
-        
-        // CORS Listener
-        $corsListener = $container->get('App\EventListener\CorsListener');
-        $dispatcher->addListener('kernel.request', [$corsListener, 'onKernelRequest'], 100);
-        $dispatcher->addListener('kernel.response', [$corsListener, 'onKernelResponse'], -100);
     }
 } 

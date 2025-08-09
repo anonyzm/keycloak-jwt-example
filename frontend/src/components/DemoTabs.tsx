@@ -67,7 +67,12 @@ export const DemoTabs: React.FC<DemoTabsProps> = ({ onAuthRequired }) => {
 
   // Автоматически загружаем данные первого таба при монтировании
   useEffect(() => {
-    fetchData(0);
+    // Небольшая задержка, чтобы убедиться что токен инициализирован
+    const timer = setTimeout(() => {
+      fetchData(0);
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const renderTabContent = (tabData: TabData, index: number) => {

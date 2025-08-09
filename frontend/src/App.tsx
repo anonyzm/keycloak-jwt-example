@@ -12,8 +12,10 @@ const App: React.FC = () => {
     // Инициализация сервиса авторизации при загрузке приложения
     const initialize = async () => {
       try {
+        console.log('Starting app initialization...');
         await authService.initialize();
         updateUserInfo();
+        console.log('App initialization completed');
       } catch (error) {
         console.error('Failed to initialize app:', error);
       } finally {

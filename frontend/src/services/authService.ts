@@ -47,8 +47,10 @@ class AuthService {
     axios.interceptors.response.use(
       (response) => response,
       async (error) => {
-        if (error.response?.status === 401) {
+        if (error.response?.status === 401 && error.config && !error.config._retry) {
+          error.config._retry = true;
           this.clearToken();
+          
           // Попытка получить новый гостевой токен
           try {
             await this.getGuestToken();
@@ -149,17 +151,26 @@ class AuthService {
 
   // Проверка, авторизован ли пользователь
   isAuthenticated(): boolean {
-    return this.getToken() !== null && this.getToken() !== 'undefined';
+    const token = this.getToken();
+    return token !== null && token !== 'undefined' && token.length > 0;
   }
 
   // Инициализация - получение токена при старте приложения
   async initialize(): Promise<void> {
-    if (!this.isAuthenticated()) {
-      try {
+    try {
+      if (!this.isAuthenticated()) {
+        console.log('No valid token found, getting guest token...');
         await this.getGuestToken();
-      } catch (error) {
-        console.error('Failed to initialize auth service:', error);
+        console.log('Guest token obtained successfully');
+      } else {
+        console.log('Valid token found in localStorage');
       }
+    } catch (error) {
+      console.error('Failed to initialize auth service:', error);
+      // Если не удалось получить токен, попробуем еще раз через секунду
+      setTimeout(() => {
+        this.initialize().catch(console.error);
+      }, 1000);
     }
   }
 

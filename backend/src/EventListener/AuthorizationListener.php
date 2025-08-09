@@ -38,11 +38,6 @@ class AuthorizationListener
         $request = $event->getRequest();
         $userRoles = $this->jwtService->getRoles($request);
         
-        // Добавляем отладочную информацию в заголовки ответа
-        error_log("AuthorizationListener: Controller: $controllerClass::$methodName");
-        error_log("AuthorizationListener: Required roles: " . json_encode($requiredRoles));
-        error_log("AuthorizationListener: User roles: " . json_encode($userRoles));
-        
         // Если роли не требуются, пропускаем
         if (empty($requiredRoles)) {
             error_log("AuthorizationListener: No roles required, allowing access");

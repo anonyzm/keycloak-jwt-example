@@ -26,6 +26,7 @@ use function fclose;
 use function getcwd;
 use function implode;
 use function in_array;
+use function ini_get;
 use function ini_set;
 use function is_array;
 use function is_callable;
@@ -83,6 +84,7 @@ use PHPUnit\Metadata\WithEnvironmentVariable;
 use PHPUnit\Runner\BackedUpEnvironmentVariable;
 use PHPUnit\Runner\DeprecationCollector\Facade as DeprecationCollector;
 use PHPUnit\Runner\HookMethodCollection;
+use PHPUnit\Runner\ShutdownHandler;
 use PHPUnit\TestRunner\TestResult\PassedTests;
 use PHPUnit\TextUI\Configuration\Registry as ConfigurationRegistry;
 use PHPUnit\Util\Exporter;
@@ -1295,7 +1297,12 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
     {
         $testArguments = array_merge($this->data, array_values($this->dependencyInput));
 
-        $capture          = tmpfile();
+        $capture = tmpfile();
+        assert($capture !== false);
+
+        if (ini_get('display_errors') === '0') {
+            ShutdownHandler::setMessage('Fatal error: Premature end of PHP process. Use display_errors=On to see the error message.');
+        }
         $errorLogPrevious = ini_set('error_log', stream_get_meta_data($capture)['uri']);
 
         try {
@@ -1330,9 +1337,8 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
 
             return null;
         } finally {
-            if ($capture !== false) {
-                fclose($capture);
-            }
+            ShutdownHandler::resetMessage();
+            fclose($capture);
 
             ini_set('error_log', $errorLogPrevious);
         }
