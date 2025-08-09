@@ -51,6 +51,13 @@ static_resources:
                 requires: {}  # только этот эндпоинт публичный
               - match:
                   prefix: "/api/"
+                  headers:
+                  - name: ":method"
+                    string_match:
+                      exact: "OPTIONS"
+                requires: {}  # OPTIONS запросы не требуют JWT
+              - match:
+                  prefix: "/api/"
                 requires:
                   provider_name: keycloak  # все остальные API требуют валидный JWT
           - name: envoy.filters.http.router
