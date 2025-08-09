@@ -3,29 +3,23 @@
 namespace App\Controller;
 
 use App\Attribute\RequiresRole;
-use App\Middleware\AuthorizationMiddleware;
 use App\Service\JwtService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 #[RequiresRole(['guest', 'user'])] // Роль по умолчанию для всего контроллера
-class DemoController extends BaseController
+class DemoController
 {
     public function __construct(
-        AuthorizationMiddleware $authMiddleware,
         private JwtService $jwtService
     ) {
-        parent::__construct($authMiddleware);
     }
 
     // Наследует роль контроллера: guest или user
     public function publicInfo(Request $request): Response
     {
-        $authResponse = $this->checkAuthorization($request, 'publicInfo');
-        if ($authResponse) {
-            return $authResponse;
-        }
-
+        // Авторизация проверяется автоматически через AuthorizationListener
+        
         $userRoles = $this->jwtService->getRoles($request);
         $userId = $this->jwtService->getUserId($request);
 
@@ -40,11 +34,8 @@ class DemoController extends BaseController
     #[RequiresRole('user')]
     public function userOnlyInfo(Request $request): Response
     {
-        $authResponse = $this->checkAuthorization($request, 'userOnlyInfo');
-        if ($authResponse) {
-            return $authResponse;
-        }
-
+        // Авторизация проверяется автоматически через AuthorizationListener
+        
         $userRoles = $this->jwtService->getRoles($request);
         $userId = $this->jwtService->getUserId($request);
 
@@ -60,10 +51,7 @@ class DemoController extends BaseController
     #[RequiresRole([])] // Пустой массив = без требований к ролям
     public function noRoleRequired(Request $request): Response
     {
-        $authResponse = $this->checkAuthorization($request, 'noRoleRequired');
-        if ($authResponse) {
-            return $authResponse;
-        }
+        // Авторизация проверяется автоматически через AuthorizationListener
         
         return new Response(json_encode([
             'message' => 'This endpoint has no role requirements (but still needs JWT from Envoy)',

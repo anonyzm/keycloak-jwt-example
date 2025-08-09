@@ -17,3 +17,7 @@ services:
     
     App\Middleware\:
         resource: '../src/Middleware/'
+    
+    App\EventListener\:
+        resource: '../src/EventListener/'
+        tags: ['kernel.event_listener']

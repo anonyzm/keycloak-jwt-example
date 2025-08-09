@@ -3,21 +3,18 @@
 namespace App\Controller;
 
 use App\Attribute\RequiresRole;
-use App\Middleware\AuthorizationMiddleware;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use App\Service\KeycloakService;
 
-class AuthController extends BaseController
+class AuthController
 {
     const TEST_PHONE = '+79123456789';
     const TEST_CODE = '123456';
 
     public function __construct(
-        AuthorizationMiddleware $authMiddleware,
         private KeycloakService $keycloakService
     ) {
-        parent::__construct($authMiddleware);
     }
     
     // Публичный эндпоинт - не требует роли
@@ -45,11 +42,7 @@ class AuthController extends BaseController
     #[RequiresRole(['guest', 'user'])]
     public function requestCode(Request $request): Response
     {
-        // Проверяем авторизацию
-        $authResponse = $this->checkAuthorization($request, 'requestCode');
-        if ($authResponse) {
-            return $authResponse;
-        }
+        // Авторизация проверяется автоматически через AuthorizationListener
         
         $phone = $request->get('phone');
         $content = json_encode(['message' => 'Code requested', 'phone' => $phone]);        
@@ -59,11 +52,7 @@ class AuthController extends BaseController
     #[RequiresRole(['guest', 'user'])]
     public function login(Request $request): Response
     {
-        // Проверяем авторизацию
-        $authResponse = $this->checkAuthorization($request, 'login');
-        if ($authResponse) {
-            return $authResponse;
-        }
+        // Авторизация проверяется автоматически через AuthorizationListener
         
         $requestBody = json_decode($request->getContent(), true);
         $phone = $requestBody['phone'];
