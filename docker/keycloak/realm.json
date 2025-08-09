@@ -9,6 +9,19 @@
     "resetPasswordAllowed": false,
     "verifyEmail": false,
   
+    "roles": {
+      "realm": [
+        {
+          "name": "guest",
+          "description": "Guest role for unauthenticated users"
+        },
+        {
+          "name": "user",
+          "description": "Authenticated user role"
+        }
+      ]
+    },
+
     "clients": [
       {
         "clientId": "backend-client",
@@ -34,6 +47,32 @@
               "user.attribute": "phone",
               "claim.name": "phone_number",
               "jsonType.label": "String",
+              "id.token.claim": "true",
+              "access.token.claim": "true",
+              "userinfo.token.claim": "true"
+            }
+          },
+          {
+            "name": "user_id",
+            "protocol": "openid-connect",
+            "protocolMapper": "oidc-usermodel-attribute-mapper",
+            "config": {
+              "user.attribute": "user_id",
+              "claim.name": "user_id",
+              "jsonType.label": "String",
+              "id.token.claim": "true",
+              "access.token.claim": "true",
+              "userinfo.token.claim": "true"
+            }
+          },
+          {
+            "name": "realm_roles",
+            "protocol": "openid-connect",
+            "protocolMapper": "oidc-usermodel-realm-role-mapper",
+            "config": {
+              "claim.name": "realm_access.roles",
+              "jsonType.label": "String",
+              "multivalued": "true",
               "id.token.claim": "true",
               "access.token.claim": "true",
               "userinfo.token.claim": "true"
@@ -111,8 +150,26 @@
         "serviceAccountClientId": "backend-client",
         "realmRoles": [],
         "clientRoles": {
-          "realm-management": ["query-users", "view-users"]
+          "realm-management": ["query-users", "view-users", "manage-users"]
         }
+      },
+      {
+        "username": "guest-user",
+        "enabled": true,
+        "email": "guest@temp.domain",
+        "emailVerified": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "GUEST_ACCESS",
+            "temporary": false
+          }
+        ],
+        "realmRoles": ["guest"],
+        "attributes": {
+          "user_type": "guest"
+        },
+        "requiredActions": []
       },
       {
         "username": "+79123456789",
@@ -126,8 +183,10 @@
             "temporary": false
           }
         ],
+        "realmRoles": ["user"],
         "attributes": {
-          "phone": "+79123456789"
+          "phone": "+79123456789",
+          "user_id": "user_79123456789"
         },
         "requiredActions": []
       }

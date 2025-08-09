@@ -18,15 +18,11 @@ static_resources:
               domains: ["*"]
               routes:
               - match:
-                  path: "/api/auth/request-code"
+                  path: "/api/auth/guest-token"
                 route:
                   cluster: backend
               - match:
-                  path: "/api/auth/login"
-                route:
-                  cluster: backend
-              - match:
-                  path: "/api/protected/hello-world"
+                  prefix: "/api/"
                 route:
                   cluster: backend
                 metadata:
@@ -53,15 +49,12 @@ static_resources:
                   payload_in_metadata: keycloak
               rules:
               - match:
-                  path: "/api/protected/hello-world"
+                  path: "/api/auth/guest-token"
+                requires: {}  # только этот эндпоинт публичный
+              - match:
+                  prefix: "/api/"
                 requires:
-                  provider_name: keycloak
-              - match:
-                  path: "/api/auth/request-code"
-                requires: {}  # empty object means no authentication is required
-              - match:
-                  path: "/api/auth/login"
-                requires: {}  # empty object means no authentication is required
+                  provider_name: keycloak  # все остальные API требуют валидный JWT
           - name: envoy.filters.http.router
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
