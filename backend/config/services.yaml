@@ -25,3 +25,7 @@ services:
         public: true
         arguments:
             $jwtService: '@App\Service\JwtService'
+    
+    # CORS Listener
+    App\EventListener\CorsListener:
+        public: true

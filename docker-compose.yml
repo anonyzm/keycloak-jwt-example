@@ -85,15 +85,18 @@ services:
     networks:
       - auth-net
 
-  # Фронтенд (опционально, для тестов)
-  # frontend:
-  #   image: nginx:alpine
-  #   ports:
-  #     - "3000:80"
-  #   volumes:
-  #     - ./frontend:/usr/share/nginx/html
-  #   networks:
-  #     - auth-net
+  # React Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    container_name: frontend
+    ports:
+      - "3001:80"
+    depends_on:
+      - envoy
+    networks:
+      - auth-net
 
 volumes:
   keycloak-db-data:

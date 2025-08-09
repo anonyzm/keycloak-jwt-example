@@ -62,7 +62,13 @@ class Kernel extends BaseKernel
     
     public function registerEventListeners($dispatcher, $container): void
     {
+        // Authorization Listener
         $authListener = $container->get('App\EventListener\AuthorizationListener');
         $dispatcher->addListener('kernel.controller', [$authListener, 'onKernelController'], 10);
+        
+        // CORS Listener
+        $corsListener = $container->get('App\EventListener\CorsListener');
+        $dispatcher->addListener('kernel.request', [$corsListener, 'onKernelRequest'], 100);
+        $dispatcher->addListener('kernel.response', [$corsListener, 'onKernelResponse'], -100);
     }
 } 
