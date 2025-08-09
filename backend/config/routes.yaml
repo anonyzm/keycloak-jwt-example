@@ -1,3 +1,11 @@
+# Получение гостевого токена
+guest_token:
+    path: /api/auth/guest-token
+    controller: App\Controller\AuthController::getGuestToken
+    methods: [POST]
+    defaults:
+        _format: json
+
 # Запрос кода
 request_code:
     path: /api/auth/request-code
@@ -14,10 +22,24 @@ login:
     defaults:
         _format: json
 
-# Hello World
-hello_world:
-    path: /api/protected/hello-world
-    controller: App\Controller\IndexController::helloWorld
+# Demo endpoints
+demo_public:
+    path: /api/demo/public
+    controller: App\Controller\DemoController::publicInfo
     methods: [GET]
     defaults:
-        _format: html
+        _format: json
+
+demo_user_only:
+    path: /api/demo/user-only
+    controller: App\Controller\DemoController::userOnlyInfo
+    methods: [GET]
+    defaults:
+        _format: json
+
+demo_no_role:
+    path: /api/demo/no-role
+    controller: App\Controller\DemoController::noRoleRequired
+    methods: [GET]
+    defaults:
+        _format: json
