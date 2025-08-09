@@ -11,7 +11,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\ControllerEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 
-#[AsEventListener(event: KernelEvents::CONTROLLER, priority: 10)]
 class AuthorizationListener
 {
     public function __construct(
@@ -21,11 +20,12 @@ class AuthorizationListener
 
     public function onKernelController(ControllerEvent $event): void
     {
+        error_log("AuthorizationListener::onKernelController called!");
+        //var_dump("asd");die();
         $controller = $event->getController();
         
         // Проверяем, что это массив [объект, метод]
         if (!is_array($controller) || count($controller) !== 2) {
-            var_dump('asd');
             return;
         }
         
@@ -34,17 +34,24 @@ class AuthorizationListener
         
         // Получаем требуемые роли
         $requiredRoles = $this->getRequiredRoles($controllerClass, $methodName);
-        var_dump($requiredRoles);
+        
+        $request = $event->getRequest();
+        $userRoles = $this->jwtService->getRoles($request);
+        
+        // Добавляем отладочную информацию в заголовки ответа
+        error_log("AuthorizationListener: Controller: $controllerClass::$methodName");
+        error_log("AuthorizationListener: Required roles: " . json_encode($requiredRoles));
+        error_log("AuthorizationListener: User roles: " . json_encode($userRoles));
+        
         // Если роли не требуются, пропускаем
         if (empty($requiredRoles)) {
+            error_log("AuthorizationListener: No roles required, allowing access");
             return;
         }
         
-        $request = $event->getRequest();
-        
         // Проверяем роли
         if (!$this->jwtService->hasAnyRole($request, $requiredRoles)) {
-            $userRoles = $this->jwtService->getRoles($request);
+            error_log("AuthorizationListener: Access denied - user doesn't have required roles");
             
             $response = new JsonResponse([
                 'error' => 'Access denied',
@@ -56,6 +63,8 @@ class AuthorizationListener
             $event->setController(function() use ($response) {
                 return $response;
             });
+        } else {
+            error_log("AuthorizationListener: Access granted - user has required roles");
         }
     }
 

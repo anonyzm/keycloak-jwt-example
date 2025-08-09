@@ -6,6 +6,11 @@ services:
         autoconfigure: true
         public: false
 
+    # Event dispatcher
+    event_dispatcher:
+        class: Symfony\Component\EventDispatcher\EventDispatcher
+        public: true
+
     # Регистрируем все контроллеры как публичные сервисы
     App\Controller\:
         resource: '../src/Controller/'
@@ -15,9 +20,8 @@ services:
     App\Service\:
         resource: '../src/Service/'
     
-    App\Middleware\:
-        resource: '../src/Middleware/'
-    
-    App\EventListener\:
-        resource: '../src/EventListener/'
-        tags: ['kernel.event_listener']
+    # Явная регистрация AuthorizationListener
+    App\EventListener\AuthorizationListener:
+        public: true
+        arguments:
+            $jwtService: '@App\Service\JwtService'

@@ -19,7 +19,7 @@ class Kernel extends BaseKernel
 
     public function registerContainerConfiguration(LoaderInterface $loader): void
     {
-        $loader->load($this->getProjectDir() . '/config/services.yaml');
+        // Конфигурация загружается в buildContainer()
     }
 
     public function getProjectDir(): string
@@ -52,6 +52,17 @@ class Kernel extends BaseKernel
         $container->setParameter('kernel.cache_dir', $this->getCacheDir());
         $container->setParameter('kernel.logs_dir', $this->getLogDir());
         
+        // Загружаем сервисы из YAML
+        $fileLocator = new FileLocator($this->getProjectDir() . '/config');
+        $yamlLoader = new YamlFileLoader($container, $fileLocator);
+        $yamlLoader->load('services.yaml');
+        
         return $container;
+    }
+    
+    public function registerEventListeners($dispatcher, $container): void
+    {
+        $authListener = $container->get('App\EventListener\AuthorizationListener');
+        $dispatcher->addListener('kernel.controller', [$authListener, 'onKernelController'], 10);
     }
 } 

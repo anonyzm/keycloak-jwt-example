@@ -29,8 +29,11 @@ $matcher = new UrlMatcher($routes, $context);
 // Создаем резолвер контроллеров с поддержкой контейнера
 $resolver = new ContainerControllerResolver($container);
 
-// Создаем диспетчер событий
-$dispatcher = new EventDispatcher();
+// Получаем диспетчер событий из контейнера
+$dispatcher = $container->get('event_dispatcher');
+
+// Регистрируем event listeners
+$kernel->registerEventListeners($dispatcher, $container);
 
 // Создаем HTTP Kernel
 $httpKernel = new HttpKernel($dispatcher, $resolver);
