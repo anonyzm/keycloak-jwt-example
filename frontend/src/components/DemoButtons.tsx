@@ -1,82 +1,70 @@
 import React, { useState, useEffect } from 'react';
-import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import { demoService } from '../services/demoService';
 import { UserInfo } from '../services/authService';
-import 'react-tabs/style/react-tabs.css';
 
-interface DemoTabsProps {
+interface DemoButtonsProps {
   onAuthRequired: () => void;
 }
 
-interface TabData {
+interface ButtonData {
   title: string;
-  data: UserInfo | null;
-  loading: boolean;
-  error: string | null;
   fetchFunction: () => Promise<UserInfo>;
 }
 
-export const DemoTabs: React.FC<DemoTabsProps> = ({ onAuthRequired }) => {
-  const [tabs, setTabs] = useState<TabData[]>([
+export const DemoButtons: React.FC<DemoButtonsProps> = ({ onAuthRequired }) => {
+  const [buttons] = useState<ButtonData[]>([
     {
-      title: 'Публичная информация',
-      data: null,
-      loading: false,
-      error: null,
+      title: 'Guest info',
       fetchFunction: demoService.getPublicInfo.bind(demoService)
     },
     {
-      title: 'Только для пользователей',
-      data: null,
-      loading: false,
-      error: null,
+      title: 'User only',
       fetchFunction: demoService.getUserOnlyInfo.bind(demoService)
     },
     {
-      title: 'Без ролей',
-      data: null,
-      loading: false,
-      error: null,
+      title: 'No role',
       fetchFunction: demoService.getNoRoleInfo.bind(demoService)
     }
   ]);
 
-  const fetchData = async (index: number) => {
-    const newTabs = [...tabs];
-    newTabs[index].loading = true;
-    newTabs[index].error = null;
-    setTabs(newTabs);
+  const [currentData, setCurrentData] = useState<UserInfo | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastClickedButton, setLastClickedButton] = useState<string>('');
+
+  const fetchData = async (buttonData: ButtonData) => {
+    setLoading(true);
+    setError(null);
+    setLastClickedButton(buttonData.title);
 
     try {
-      const data = await newTabs[index].fetchFunction();
-      newTabs[index].data = data;
-      newTabs[index].loading = false;
+      const data = await buttonData.fetchFunction();
+      setCurrentData(data);
+      setLoading(false);
     } catch (error: any) {
-      newTabs[index].loading = false;
+      setLoading(false);
       
       if (error.response?.status === 403) {
-        newTabs[index].error = 'Доступ запрещен. Требуется авторизация.';
+        setError('Доступ запрещен. Требуется авторизация.');
         onAuthRequired();
       } else {
-        newTabs[index].error = error.response?.data?.message || 'Ошибка при загрузке данных';
+        setError(error.response?.data?.message || 'Ошибка при загрузке данных');
       }
     }
-    
-    setTabs(newTabs);
   };
 
-  // Автоматически загружаем данные первого таба при монтировании
+  // Автоматически загружаем данные первой кнопки при монтировании
   useEffect(() => {
     // Небольшая задержка, чтобы убедиться что токен инициализирован
     const timer = setTimeout(() => {
-      fetchData(0);
+      fetchData(buttons[0]);
     }, 100);
     
     return () => clearTimeout(timer);
   }, []);
 
-  const renderTabContent = (tabData: TabData, index: number) => {
-    if (tabData.loading) {
+  const renderContent = () => {
+    if (loading) {
       return (
         <div style={{ 
           display: 'flex', 
@@ -90,7 +78,7 @@ export const DemoTabs: React.FC<DemoTabsProps> = ({ onAuthRequired }) => {
       );
     }
 
-    if (tabData.error) {
+    if (error) {
       return (
         <div style={{ padding: '1rem' }}>
           <div style={{
@@ -100,10 +88,10 @@ export const DemoTabs: React.FC<DemoTabsProps> = ({ onAuthRequired }) => {
             borderRadius: '4px',
             marginBottom: '1rem'
           }}>
-            {tabData.error}
+            {error}
           </div>
           <button
-            onClick={() => fetchData(index)}
+            onClick={() => fetchData(buttons.find(b => b.title === lastClickedButton)!)}
             style={{
               padding: '0.5rem 1rem',
               backgroundColor: '#007bff',
@@ -119,22 +107,12 @@ export const DemoTabs: React.FC<DemoTabsProps> = ({ onAuthRequired }) => {
       );
     }
 
-    if (!tabData.data) {
+    if (!currentData) {
       return (
         <div style={{ padding: '1rem' }}>
-          <button
-            onClick={() => fetchData(index)}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Загрузить данные
-          </button>
+          <p style={{ color: '#666', textAlign: 'center' }}>
+            Нажмите на одну из кнопок выше, чтобы загрузить данные
+          </p>
         </div>
       );
     }
@@ -150,14 +128,14 @@ export const DemoTabs: React.FC<DemoTabsProps> = ({ onAuthRequired }) => {
         }}>
           <h3 style={{ margin: '0 0 1rem 0', color: '#495057' }}>Ответ сервера:</h3>
           <div style={{ marginBottom: '1rem' }}>
-            <strong>Сообщение:</strong> {tabData.data.message}
+            <strong>Сообщение:</strong> {currentData.message}
           </div>
           
-          {tabData.data.your_roles && tabData.data.your_roles.length > 0 && (
+          {currentData.your_roles && currentData.your_roles.length > 0 && (
             <div style={{ marginBottom: '1rem' }}>
               <strong>Ваши роли:</strong>
               <div style={{ marginTop: '0.5rem' }}>
-                {tabData.data.your_roles.map((role, i) => (
+                {currentData.your_roles.map((role, i) => (
                   <span
                     key={i}
                     style={{
@@ -177,13 +155,13 @@ export const DemoTabs: React.FC<DemoTabsProps> = ({ onAuthRequired }) => {
             </div>
           )}
 
-          {tabData.data.user_id && (
+          {currentData.user_id && (
             <div style={{ marginBottom: '1rem' }}>
-              <strong>ID пользователя:</strong> {tabData.data.user_id}
+              <strong>ID пользователя:</strong> {currentData.user_id}
             </div>
           )}
 
-          {tabData.data.sensitive_data && (
+          {currentData.sensitive_data && (
             <div style={{ marginBottom: '1rem' }}>
               <strong>Секретные данные:</strong>
               <div style={{
@@ -194,14 +172,14 @@ export const DemoTabs: React.FC<DemoTabsProps> = ({ onAuthRequired }) => {
                 marginTop: '0.5rem',
                 fontFamily: 'monospace'
               }}>
-                {tabData.data.sensitive_data}
+                {currentData.sensitive_data}
               </div>
             </div>
           )}
         </div>
         
         <button
-          onClick={() => fetchData(index)}
+          onClick={() => fetchData(buttons.find(b => b.title === lastClickedButton)!)}
           style={{
             padding: '0.5rem 1rem',
             backgroundColor: '#28a745',
@@ -219,24 +197,56 @@ export const DemoTabs: React.FC<DemoTabsProps> = ({ onAuthRequired }) => {
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-      <Tabs onSelect={(index) => {
-        // Загружаем данные для выбранного таба, если они еще не загружены
-        if (!tabs[index].data && !tabs[index].loading) {
-          fetchData(index);
-        }
+      {/* Кнопки */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        gap: '1rem', 
+        marginBottom: '1rem',
+        flexWrap: 'wrap'
       }}>
-        <TabList>
-          {tabs.map((tab, index) => (
-            <Tab key={index}>{tab.title}</Tab>
-          ))}
-        </TabList>
-
-        {tabs.map((tab, index) => (
-          <TabPanel key={index}>
-            {renderTabContent(tab, index)}
-          </TabPanel>
+        {buttons.map((button, index) => (
+          <button
+            key={index}
+            onClick={() => fetchData(button)}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: lastClickedButton === button.title ? '#28a745' : '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '500',
+              transition: 'background-color 0.2s ease',
+              minWidth: '200px'
+            }}
+            onMouseEnter={(e) => {
+              if (lastClickedButton !== button.title) {
+                e.currentTarget.style.backgroundColor = '#0056b3';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (lastClickedButton !== button.title) {
+                e.currentTarget.style.backgroundColor = '#007bff';
+              }
+            }}
+          >
+            {button.title}
+          </button>
         ))}
-      </Tabs>
+      </div>
+
+      {/* Контейнер с информацией */}
+      <div style={{
+        backgroundColor: 'white',
+        border: '1px solid #e9ecef',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        minHeight: '300px'
+      }}>
+        {renderContent()}
+      </div>
     </div>
   );
 };

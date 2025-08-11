@@ -32,9 +32,9 @@ class KeycloakService
     }
 
     // Создаем пользователя
-    public function createUser($phone) 
+    public function createUser($phone)   
     {
-        $token = $this->getServiceToken();
+        $token = $this->getAdminToken();
         $url = $this->keycloakUrl . '/admin/realms/' . $this->realm . '/users';
         
         $userId = 'user_' . str_replace('+', '', $phone);
@@ -60,14 +60,7 @@ class KeycloakService
             'Content-Type: application/json'
         ];
         
-        $result = $this->httpPost($url, $userData, $headers);
-        
-        // Назначаем роль user новому пользователю
-        if ($result === null || (is_array($result) && !isset($result['error']))) {
-            $this->assignUserRole($phone, 'user');
-        }
-        
-        return $result;
+        return $this->httpPost($url, $userData, $headers);
     }
     
     // Получаем токен для пользователя
@@ -84,7 +77,8 @@ class KeycloakService
             'scope' => 'openid'
         ];
         
-        return $this->httpPost($url, $data);
+        // Для токенов используем form-encoded формат
+        return $this->httpPostForm($url, $data);
     }
 
     // Получаем гостевой токен
@@ -101,24 +95,43 @@ class KeycloakService
             'scope' => 'openid'
         ];
         
-        return $this->httpPost($url, $data);
+        // Для токенов используем form-encoded формат
+        return $this->httpPostForm($url, $data);
     }
 
     // Назначаем роль пользователю
     public function assignUserRole($username, $roleName)
     {
+        $this->log("Attempting to assign role '{$roleName}' to user '{$username}'");
+        
         $token = $this->getServiceToken();
+        if (!$token) {
+            $this->log("Failed to get service token");
+            return ['error' => 'Failed to get service token'];
+        }
         
         // Получаем ID пользователя
         $userId = $this->getUserId($username, $token);
         if (!$userId) {
+            $this->log("User '{$username}' not found");
             return ['error' => 'User not found'];
         }
         
+        $this->log("Found user ID: {$userId}");
+        
         // Получаем роль
         $role = $this->getRole($roleName, $token);
-        if (!$role) {
-            return ['error' => 'Role not found'];
+        if (!$role || isset($role['error'])) {
+            $this->log("Role '{$roleName}' not found or invalid: " . json_encode($role));
+            return ['error' => 'Role not found: ' . $roleName];
+        }
+        
+        $this->log("Found role: " . json_encode($role));
+        
+        // Проверяем, что роль имеет правильную структуру
+        if (!isset($role['id']) || !isset($role['name'])) {
+            $this->log("Invalid role structure: " . json_encode($role));
+            return ['error' => 'Invalid role structure'];
         }
         
         // Назначаем роль
@@ -129,7 +142,16 @@ class KeycloakService
             'Content-Type: application/json'
         ];
         
-        return $this->httpPost($url, json_encode([$role]), $headers);
+        $this->log("Assigning role via URL: {$url}");
+        $result = $this->httpPost($url, [$role], $headers);
+        
+        if (isset($result['error'])) {
+            $this->log("Failed to assign role: " . json_encode($result));
+        } else {
+            $this->log("Successfully assigned role '{$roleName}' to user '{$username}'");
+        }
+        
+        return $result;
     }
 
     // Обновляем роль пользователя с guest на user (для существующего пользователя)
@@ -161,7 +183,7 @@ class KeycloakService
         ];
         
         // Обновляем атрибуты пользователя
-        $this->httpPut($url, json_encode($userData), $headers);
+        $this->httpPut($url, $userData, $headers);
         
         // Удаляем роль guest, если она есть
         $this->removeUserRole($phone, 'guest');
@@ -187,7 +209,8 @@ class KeycloakService
             'client_secret' => $this->clientSecret
         ];
         
-        $response = $this->httpPost($url, $data);
+        // Для токенов используем form-encoded формат
+        $response = $this->httpPostForm($url, $data);
         return $response['access_token'];
     }
     
@@ -202,7 +225,8 @@ class KeycloakService
             'password' => 'admin'       // Пароль админа
         ];
         
-        $response = $this->httpPost($url, $data);
+        // Для токенов используем form-encoded формат
+        $response = $this->httpPostForm($url, $data);
         return $response['access_token'];
     }
         
@@ -221,16 +245,41 @@ class KeycloakService
     }
 
     // Получаем роль по имени
-    private function getRole($roleName, $token)
+    private function getRoles($token)
     {
-        $url = $this->keycloakUrl . '/admin/realms/' . $this->realm . '/roles/' . $roleName;
+        $url = $this->keycloakUrl . '/admin/realms/' . $this->realm . '/roles';
         
         $headers = [
             'Authorization: Bearer ' . $token,
             'Content-Type: application/json'
         ];
         
-        return $this->httpGet($url, $headers);
+        $response = $this->httpGet($url, $headers);
+        
+        return $response;
+    }
+
+    private function getRole($roleName, $token) 
+    {
+        $role = null;
+        $roles = $this->getRoles($token);
+        foreach ($roles as $item) {
+            if ($item['name'] === $roleName) {
+                $role = $item;
+            }
+        }
+
+         // Проверяем, что ответ не содержит ошибку
+         if (isset($role['error'])) {
+            return ['error' => 'Role not found: ' . $roleName];
+        }
+        
+        // Проверяем, что роль имеет необходимые поля
+        if (!$role || !isset($role['id']) || !isset($role['name'])) {
+            return ['error' => 'Invalid role data'];
+        }
+
+        return $role;
     }
 
     // Удаляем роль у пользователя
@@ -251,16 +300,40 @@ class KeycloakService
             'Content-Type: application/json'
         ];
         
-        return $this->httpDelete($url, json_encode([$role]), $headers);
+        return $this->httpDelete($url, [$role], $headers);
     }
 
-    // HTTP-клиент
+    // HTTP-клиент для JSON данных
     private function httpPost($url, $data, $headers = []) 
     {
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, is_array($data) ? http_build_query($data) : $data);
+        
+        // Всегда кодируем данные в JSON
+        if (is_array($data)) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        } else {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        }
+        
+        if (!empty($headers)) {
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        }
+        
+        $response = curl_exec($ch);
+        return json_decode($response, true);
+    }
+    
+    // HTTP-клиент для form-encoded данных (для токенов)
+    private function httpPostForm($url, $data, $headers = []) 
+    {
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        
+        // Используем form-encoded формат для токенов
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
         
         if (!empty($headers)) {
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -274,13 +347,32 @@ class KeycloakService
     {
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HEADER, false);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         
         if (!empty($headers)) {
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         }
         
         $response = curl_exec($ch);
-        return json_decode($response, true);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+        
+        if ($error) {
+            return ['error' => 'cURL error: ' . $error];
+        }
+        
+        if ($httpCode >= 400) {
+            return ['error' => 'HTTP error: ' . $httpCode];
+        }
+        
+        $decoded = json_decode($response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return ['error' => 'Invalid JSON response'];
+        }
+        
+        return $decoded;
     }
 
     private function httpPut($url, $data, $headers = [])
@@ -288,7 +380,13 @@ class KeycloakService
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        
+        // Всегда кодируем данные в JSON
+        if (is_array($data)) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        } else {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        }
         
         if (!empty($headers)) {
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -305,7 +403,12 @@ class KeycloakService
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
         
         if ($data) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+            // Всегда кодируем данные в JSON
+            if (is_array($data)) {
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+            } else {
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+            }
         }
         
         if (!empty($headers)) {
@@ -314,5 +417,19 @@ class KeycloakService
         
         $response = curl_exec($ch);
         return json_decode($response, true);
+    }
+    
+    // Метод для логирования (можно заменить на PSR Logger)
+    private function log($message)
+    {
+        $timestamp = date('Y-m-d H:i:s');
+        $logMessage = "[{$timestamp}] KeycloakService: {$message}" . PHP_EOL;
+        
+        // Логируем в файл или stdout для отладки
+        if (php_sapi_name() === 'cli') {
+            echo $logMessage;
+        } else {
+            error_log($logMessage);
+        }
     }
 }
