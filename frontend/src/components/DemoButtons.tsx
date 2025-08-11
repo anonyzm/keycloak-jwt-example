@@ -73,7 +73,7 @@ export const DemoButtons: React.FC<DemoButtonsProps> = ({ onAuthRequired }) => {
           minHeight: '200px',
           color: '#666'
         }}>
-          Загрузка...
+          Loading...
         </div>
       );
     }
@@ -101,7 +101,7 @@ export const DemoButtons: React.FC<DemoButtonsProps> = ({ onAuthRequired }) => {
               cursor: 'pointer'
             }}
           >
-            Повторить запрос
+            Repeat request
           </button>
         </div>
       );
@@ -111,7 +111,7 @@ export const DemoButtons: React.FC<DemoButtonsProps> = ({ onAuthRequired }) => {
       return (
         <div style={{ padding: '1rem' }}>
           <p style={{ color: '#666', textAlign: 'center' }}>
-            Нажмите на одну из кнопок выше, чтобы загрузить данные
+            Click one of the buttons above to load data
           </p>
         </div>
       );
@@ -126,14 +126,14 @@ export const DemoButtons: React.FC<DemoButtonsProps> = ({ onAuthRequired }) => {
           padding: '1rem',
           marginBottom: '1rem'
         }}>
-          <h3 style={{ margin: '0 0 1rem 0', color: '#495057' }}>Ответ сервера:</h3>
+          <h3 style={{ margin: '0 0 1rem 0', color: '#495057' }}>API response:</h3>
           <div style={{ marginBottom: '1rem' }}>
-            <strong>Сообщение:</strong> {currentData.message}
+            <strong>Message:</strong> {currentData.message}
           </div>
           
           {currentData.your_roles && currentData.your_roles.length > 0 && (
             <div style={{ marginBottom: '1rem' }}>
-              <strong>Ваши роли:</strong>
+              <strong>Your Roles:</strong>
               <div style={{ marginTop: '0.5rem' }}>
                 {currentData.your_roles.map((role, i) => (
                   <span
@@ -157,13 +157,13 @@ export const DemoButtons: React.FC<DemoButtonsProps> = ({ onAuthRequired }) => {
 
           {currentData.user_id && (
             <div style={{ marginBottom: '1rem' }}>
-              <strong>ID пользователя:</strong> {currentData.user_id}
+              <strong>User ID:</strong> {currentData.user_id}
             </div>
           )}
 
           {currentData.sensitive_data && (
             <div style={{ marginBottom: '1rem' }}>
-              <strong>Секретные данные:</strong>
+              <strong>Sensitive data:</strong>
               <div style={{
                 backgroundColor: '#fff3cd',
                 border: '1px solid #ffeaa7',
@@ -189,7 +189,7 @@ export const DemoButtons: React.FC<DemoButtonsProps> = ({ onAuthRequired }) => {
             cursor: 'pointer'
           }}
         >
-          Обновить данные
+          Update data
         </button>
       </div>
     );
