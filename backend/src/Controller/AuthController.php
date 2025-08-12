@@ -41,7 +41,7 @@ class AuthController
         return new Response($result, $status, ['Content-Type' => 'application/json']);
     }
     
-    #[RequiresRole(['guest', 'user'])]
+    #[RequiresRole(['guest'])]
     public function requestCode(Request $request): Response
     {
         // Авторизация проверяется автоматически через AuthorizationListener
@@ -51,7 +51,7 @@ class AuthController
         return new Response($content, 200, ['Content-Type' => 'application/json']);
     }
 
-    #[RequiresRole(['guest', 'user'])]
+    #[RequiresRole(['guest'])]
     public function login(Request $request): Response
     {
         // Авторизация проверяется автоматически через AuthorizationListener

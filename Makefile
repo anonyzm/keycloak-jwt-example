@@ -27,6 +27,9 @@ rebuild:
 logs:
 	docker compose logs -f backend
 
+keycloak-logs:
+	docker compose logs -f keycloak
+
 bash:
 	docker compose exec --user application backend bash
 

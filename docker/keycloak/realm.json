@@ -38,7 +38,8 @@
         "authorizationServicesEnabled": true,
         "standardFlowEnabled": false,
         "implicitFlowEnabled": false,
-        "refreshTokenMaxReuse": 0,
+        "redirectUris": ["http://localhost/*", "http://backend/*"],
+        "webOrigins": ["http://localhost:3001", "http://localhost:80", "http://localhost:8081"],
         "attributes": {
           "access.token.lifespan": "300",
           "refresh.token.lifespan": "1800"

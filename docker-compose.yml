@@ -59,7 +59,7 @@ services:
       - cache_volume:/opt/app/cache
       - logs_volume:/opt/app/logs
     environment:
-      - KEYCLOAK_URL=http://localhost:8080
+      - KEYCLOAK_URL=http://keycloak:8080
       - KEYCLOAK_REALM=myrealm
       - KEYCLOAK_CLIENT_ID=backend-client
       - KEYCLOAK_CLIENT_SECRET=your-client-secret

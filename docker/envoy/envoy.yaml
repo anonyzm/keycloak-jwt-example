@@ -22,6 +22,10 @@ static_resources:
                 route:
                   cluster: backend
               - match:
+                  path: "/api/auth/refresh-token"
+                route:
+                  cluster: backend
+              - match:
                   prefix: "/api/"
                 route:
                   cluster: backend
@@ -45,12 +49,14 @@ static_resources:
                     cache_duration:
                       seconds: 300
                   payload_in_metadata: keycloak
+                  audiences:
+                    - backend-client
               rules:
               - match:
-                  path: "/api/auth/refresh-token"
+                  path: "/api/auth/guest-token"
                 requires: {}  # этот эндпоинт публичный
               - match:
-                  path: "/api/auth/guest-token"
+                  path: "/api/auth/refresh-token"
                 requires: {}  # этот эндпоинт публичный  
               - match:
                   prefix: "/api/"
