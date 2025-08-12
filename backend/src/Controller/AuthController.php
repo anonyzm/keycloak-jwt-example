@@ -9,6 +9,8 @@ use App\Service\KeycloakService;
 
 class AuthController
 {
+    private array $log = [];
+
     const TEST_PHONE = '+79123456789';
     const TEST_CODE = '123456';
 
@@ -59,24 +61,30 @@ class AuthController
         $code = $requestBody['code'];
 
         // Валидация кода
-        if ($phone !== self::TEST_PHONE || $code !== self::TEST_CODE) {
+        if ($code !== self::TEST_CODE) {
             return new Response('Invalid code', 400);
         }
         
         // Проверяем существование пользователя
         if (!$this->keycloakService->userExists($phone)) {
+            $this->log('User does not exist');
             // Создаем при первом входе
-            $this->keycloakService->createUser($phone);
+            $result = $this->keycloakService->createUser($phone);
+            $this->log('User created: ' . json_encode($result));
+            // Назначаем роль пользователю
+            $result =   $this->keycloakService->assignUserRole($phone, 'user');
+            $this->log('User role assigned: ' . json_encode($result));
             // Получаем токен для нового пользователя
-            $token = $this->keycloakService->getUserToken($phone);
-        } else {
-            // Пользователь уже существует, обновляем гостевой токен на пользовательский
-            $token = $this->keycloakService->upgradeGuestToUser($phone);
-        }
+            //$token = $this->keycloakService->getUserToken($phone);            
+        } 
+        
+        $token = $this->keycloakService->upgradeGuestToUser($phone);
+        $this->log('Token upgraded: ' . json_encode($token));
 
         $status = 200;
         $responseJson = [
             'message' => 'Login successful', 
+            'log' => $this->getLog(),
         ];
         if (!empty($token['error'])) {
             $status = 400;
@@ -88,5 +96,17 @@ class AuthController
 
         $result = json_encode($responseJson); 
         return new Response($result, $status, ['Content-Type' => 'application/json']);
+    }
+
+    // -------------private-methods-------------
+    
+    private function log($message)
+    {
+        $this->log[] = $message;
+    }
+
+    private function getLog()
+    {
+        return $this->log;
     }
 }

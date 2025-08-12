@@ -25,3 +25,7 @@ services:
         public: true
         arguments:
             $jwtService: '@App\Service\JwtService'
+    
+    # API CORS Listener для обработки всех /api/* эндпоинтов
+    App\EventListener\ApiCorsListener:
+        public: true
