@@ -40,7 +40,7 @@ httpClient.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
-      console.log('🔐 Received 401 error, attempting to refresh guest token...');
+      console.log('🔐 Received 401 error, attempting to refresh token...');
       console.log('📝 Original request:', {
         url: originalRequest.url,
         method: originalRequest.method,
@@ -48,9 +48,18 @@ httpClient.interceptors.response.use(
       });
       
       try {
-        // Принудительно обновляем гостевой токен
-        await authService.forceRefreshGuestToken();
-        console.log('✅ Successfully refreshed guest token, retrying request...');
+        // Пытаемся обновить токен с помощью refresh_token
+        const refreshToken = authService.getRefreshToken();
+        if (refreshToken) {
+          console.log('🔄 Attempting to refresh token with refresh_token...');
+          await authService.refreshToken(refreshToken);
+          console.log('✅ Successfully refreshed token, retrying request...');
+        } else {
+          // Если нет refresh_token, принудительно обновляем гостевой токен
+          console.log('⚠️ No refresh_token found, falling back to guest token...');
+          await authService.forceRefreshGuestToken();
+          console.log('✅ Successfully refreshed guest token, retrying request...');
+        }
         
         // Повторяем оригинальный запрос с новым токеном
         const token = authService.getToken();
@@ -63,7 +72,7 @@ httpClient.interceptors.response.use(
           return Promise.reject(error);
         }
       } catch (refreshError) {
-        console.error('❌ Failed to refresh guest token:', refreshError);
+        console.error('❌ Failed to refresh token:', refreshError);
         // Если не удалось обновить токен, очищаем его и возвращаем ошибку
         authService.clearToken();
         console.log('🧹 Cleared invalid token');

@@ -4,6 +4,7 @@ export interface TokenResponse {
   access_token: string;
   expires_in: number;
   token_type: string;
+  refresh_token?: string; // Опциональный refresh_token
 }
 
 export interface AuthResponse {
@@ -31,6 +32,7 @@ export interface AuthRequest {
 class AuthService {
   private readonly TOKEN_KEY = 'jwt_token';
   private readonly TOKEN_EXPIRY_KEY = 'jwt_token_expiry';
+  private readonly REFRESH_TOKEN_KEY = 'jwt_refresh_token';
 
   constructor() {
     // Убираем дублирующие interceptor'ы - они теперь только в httpClient.ts
@@ -89,6 +91,11 @@ class AuthService {
     const expiryTime = Date.now() + (tokenData.expires_in * 1000);
     localStorage.setItem(this.TOKEN_KEY, tokenData.access_token);
     localStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
+    
+    // Сохраняем refresh_token, если он есть
+    if (tokenData.refresh_token) {
+      localStorage.setItem(this.REFRESH_TOKEN_KEY, tokenData.refresh_token);
+    }
   }
 
   // Получение токена из localStorage
@@ -109,10 +116,16 @@ class AuthService {
     return token;
   }
 
+  // Получение refresh_token из localStorage
+  getRefreshToken(): string | null {
+    return localStorage.getItem(this.REFRESH_TOKEN_KEY);
+  }
+
   // Очистка токена
   clearToken(): void {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
+    localStorage.removeItem(this.REFRESH_TOKEN_KEY);
   }
 
   // Проверка, авторизован ли пользователь
@@ -145,6 +158,24 @@ class AuthService {
     console.log('Force refreshing guest token...');
     this.clearToken();
     return await this.getGuestToken();
+  }
+
+  // Обновление токена с использованием refresh_token
+  async refreshToken(refreshToken: string): Promise<TokenResponse> {
+    try {
+      const response: any = await httpClient.post(
+        `/auth/refresh-token`,
+        { refresh_token: refreshToken }
+      );
+      
+      // Backend возвращает {message: "...", token: {...}}
+      const tokenData = response.data.token;
+      this.saveToken(tokenData);
+      return tokenData;
+    } catch (error) {
+      console.error('Failed to refresh token:', error);
+      throw error;
+    }
   }
 
   // Проверка валидности токена и обновление при необходимости

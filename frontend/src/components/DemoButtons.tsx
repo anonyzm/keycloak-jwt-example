@@ -4,6 +4,7 @@ import { UserInfo } from '../services/authService';
 
 interface DemoButtonsProps {
   onAuthRequired: () => void;
+  onAuthSuccess?: () => void; // Новый callback для уведомления об успешной авторизации
 }
 
 interface ButtonData {
@@ -11,7 +12,7 @@ interface ButtonData {
   fetchFunction: () => Promise<UserInfo>;
 }
 
-export const DemoButtons: React.FC<DemoButtonsProps> = ({ onAuthRequired }) => {
+export const DemoButtons = React.forwardRef<{ handleAuthSuccess: () => void }, DemoButtonsProps>(({ onAuthRequired, onAuthSuccess }, ref) => {
   const [buttons] = useState<ButtonData[]>([
     {
       title: 'Guest info',
@@ -45,13 +46,36 @@ export const DemoButtons: React.FC<DemoButtonsProps> = ({ onAuthRequired }) => {
       setLoading(false);
       
       if (error.response?.status === 403) {
-        setError('Доступ запрещен. Требуется авторизация.');
+        setError('Access denied. Authorization required.');
         onAuthRequired();
       } else {
-        setError(error.response?.data?.message || 'Ошибка при загрузке данных');
+        setError(error.response?.data?.message || 'Error loading data');
       }
     }
   };
+
+  // Функция для перезапроса данных последней активной кнопки
+  const retryLastRequest = () => {
+    if (lastClickedButton) {
+      const button = buttons.find(b => b.title === lastClickedButton);
+      if (button) {
+        fetchData(button);
+      }
+    }
+  };
+
+  // Функция для вызова после успешной авторизации
+  const handleAuthSuccess = () => {
+    // Небольшая задержка, чтобы токен успел обновиться
+    setTimeout(() => {
+      retryLastRequest();
+    }, 500);
+  };
+
+  // Экспортируем функцию через ref
+  React.useImperativeHandle(ref, () => ({
+    handleAuthSuccess
+  }));
 
   // Автоматически загружаем данные первой кнопки при монтировании
   useEffect(() => {
@@ -249,4 +273,4 @@ export const DemoButtons: React.FC<DemoButtonsProps> = ({ onAuthRequired }) => {
       </div>
     </div>
   );
-};
+});

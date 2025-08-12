@@ -74,8 +74,6 @@ class AuthController
             // Назначаем роль пользователю
             $result =   $this->keycloakService->assignUserRole($phone, 'user');
             $this->log('User role assigned: ' . json_encode($result));
-            // Получаем токен для нового пользователя
-            //$token = $this->keycloakService->getUserToken($phone);            
         } 
         
         $token = $this->keycloakService->upgradeGuestToUser($phone);
@@ -92,6 +90,44 @@ class AuthController
             $responseJson['message'] = $token['error_description'] ?? 'Unknown error';
         } else {
             $responseJson['token'] = $token;
+        }
+
+        $result = json_encode($responseJson); 
+        return new Response($result, $status, ['Content-Type' => 'application/json']);
+    }
+
+    // Публичный эндпоинт - не требует роли
+    public function refreshToken(Request $request): Response
+    {
+        $requestBody = json_decode($request->getContent(), true);
+        $refreshToken = $requestBody['refresh_token'] ?? null;
+
+        if (!$refreshToken) {
+            $responseJson = [
+                'error' => 'refresh_token_required',
+                'message' => 'Refresh token is required'
+            ];
+            return new Response(json_encode($responseJson), 400, ['Content-Type' => 'application/json']);
+        }
+
+        $this->log('Attempting to refresh token with: ' . substr($refreshToken, 0, 20) . '...');
+        
+        $token = $this->keycloakService->refreshToken($refreshToken);
+        
+        $status = 200;
+        $responseJson = [
+            'message' => 'Token refreshed successfully',
+            'log' => $this->getLog()
+        ];
+        
+        if (!empty($token['error'])) {
+            $status = 400;
+            $responseJson['error'] = $token['error'];
+            $responseJson['message'] = $token['error_description'] ?? 'Failed to refresh token';
+            $this->log('Token refresh failed: ' . json_encode($token));
+        } else {
+            $responseJson['token'] = $token;
+            $this->log('Token refresh successful');
         }
 
         $result = json_encode($responseJson); 

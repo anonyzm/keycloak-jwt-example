@@ -47,8 +47,11 @@ static_resources:
                   payload_in_metadata: keycloak
               rules:
               - match:
+                  path: "/api/auth/refresh-token"
+                requires: {}  # этот эндпоинт публичный
+              - match:
                   path: "/api/auth/guest-token"
-                requires: {}  # только этот эндпоинт публичный
+                requires: {}  # этот эндпоинт публичный  
               - match:
                   prefix: "/api/"
                   headers:

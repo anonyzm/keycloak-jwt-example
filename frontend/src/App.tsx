@@ -57,6 +57,17 @@ const App: React.FC = () => {
     updateUserInfo();
   };
 
+  // Ref для доступа к DemoButtons
+  const demoButtonsRef = React.useRef<{ handleAuthSuccess: () => void }>(null);
+
+  // Функция для уведомления DemoButtons об успешной авторизации
+  const handleDemoButtonsAuthSuccess = () => {
+    // Вызываем функцию DemoButtons для перезапроса данных
+    if (demoButtonsRef.current) {
+      demoButtonsRef.current.handleAuthSuccess();
+    }
+  };
+
   if (!isInitialized) {
     return (
       <div style={{
@@ -142,7 +153,11 @@ const App: React.FC = () => {
           overflow: 'hidden',
           padding: '1rem'
         }}>
-          <DemoButtons onAuthRequired={handleAuthRequired} />
+          <DemoButtons 
+            ref={demoButtonsRef}
+            onAuthRequired={handleAuthRequired} 
+            onAuthSuccess={handleDemoButtonsAuthSuccess}
+          />
         </main>
 
         {/* Модальное окно авторизации */}

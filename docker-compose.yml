@@ -15,7 +15,7 @@ services:
       KC_PROXY: edge
       KC_HTTP_ENABLED: "true"
       KC_HTTP_CORS_ALLOWED_ORIGINS: "*"
-      KC_SPI_HOSTNAME_DEFAULT_FRONTEND_URL: http://keycloak:8080
+      KC_SPI_HOSTNAME_DEFAULT_FRONTEND_URL: http://localhost:8080
       KC_SPI_HOSTNAME_DEFAULT_ADMIN_URL: http://localhost:8080
     volumes:
       - ./docker/keycloak/realm.json:/opt/keycloak/data/import/realm.json
@@ -59,7 +59,7 @@ services:
       - cache_volume:/opt/app/cache
       - logs_volume:/opt/app/logs
     environment:
-      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_URL=http://localhost:8080
       - KEYCLOAK_REALM=myrealm
       - KEYCLOAK_CLIENT_ID=backend-client
       - KEYCLOAK_CLIENT_SECRET=your-client-secret

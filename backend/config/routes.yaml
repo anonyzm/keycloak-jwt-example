@@ -22,6 +22,14 @@ login:
     defaults:
         _format: json
 
+# Обновление токена
+refresh_token:
+    path: /api/auth/refresh-token
+    controller: App\Controller\AuthController::refreshToken
+    methods: [POST]
+    defaults:
+        _format: json
+
 # Demo endpoints
 demo_public:
     path: /api/demo/public

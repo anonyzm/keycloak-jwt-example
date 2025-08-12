@@ -99,6 +99,33 @@ class KeycloakService
         return $this->httpPostForm($url, $data);
     }
 
+    // Обновляем токен с использованием refresh_token
+    public function refreshToken($refreshToken) 
+    {
+        $url = $this->keycloakUrl . '/realms/' . $this->realm . '/protocol/openid-connect/token';
+        
+        $this->log("Refreshing token via URL: {$url}");
+        $this->log("Using client_id: {$this->clientId}");
+        
+        $data = [
+            'grant_type' => 'refresh_token',
+            'client_id' => $this->clientId,
+            'client_secret' => $this->clientSecret,
+            'refresh_token' => $refreshToken
+        ];
+        
+        // Для токенов используем form-encoded формат
+        $response = $this->httpPostForm($url, $data);
+        
+        if (isset($response['error'])) {
+            $this->log("Token refresh failed: " . json_encode($response));
+        } else {
+            $this->log("Token refresh successful");
+        }
+        
+        return $response;
+    }
+
     // Назначаем роль пользователю
     public function assignUserRole($username, $roleName)
     {
@@ -333,14 +360,33 @@ class KeycloakService
         curl_setopt($ch, CURLOPT_POST, true);
         
         // Используем form-encoded формат для токенов
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+        $postFields = http_build_query($data);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
         
         if (!empty($headers)) {
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         }
         
         $response = curl_exec($ch);
-        return json_decode($response, true);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+        
+        if ($error) {
+            $this->log("cURL error in httpPostForm: " . $error);
+            return ['error' => 'cURL error: ' . $error];
+        }
+        
+        $this->log("HTTP response code: " . $httpCode);
+        $this->log("Response: " . $response);
+        
+        $decoded = json_decode($response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->log("JSON decode error: " . json_last_error_msg());
+            return ['error' => 'Invalid JSON response'];
+        }
+        
+        return $decoded;
     }
     
     private function httpGet($url, $headers = []) 

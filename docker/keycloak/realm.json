@@ -8,6 +8,9 @@
     "registrationAllowed": false,
     "resetPasswordAllowed": false,
     "verifyEmail": false,
+    "attributes": {
+        "frontendUrl": "http://localhost:8080"
+    },
   
     "roles": {
       "realm": [
@@ -35,8 +38,10 @@
         "authorizationServicesEnabled": true,
         "standardFlowEnabled": false,
         "implicitFlowEnabled": false,
+        "refreshTokenMaxReuse": 0,
         "attributes": {
-          "access.token.lifespan": "300"
+          "access.token.lifespan": "300",
+          "refresh.token.lifespan": "1800"
         },
         "protocolMappers": [
           {
