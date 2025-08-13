@@ -9,7 +9,6 @@ use App\Service\KeycloakService;
 
 class AuthController
 {
-    const TEST_PHONE = '+79123456789';
     const TEST_CODE = '123456';
 
     public function __construct(
@@ -59,21 +58,24 @@ class AuthController
         $code = $requestBody['code'];
 
         // Валидация кода
-        if ($phone !== self::TEST_PHONE || $code !== self::TEST_CODE) {
+        if ($code !== self::TEST_CODE) {
             return new Response('Invalid code', 400);
         }
         
         // Проверяем существование пользователя
         if (!$this->keycloakService->userExists($phone)) {
             // Создаем при первом входе
-            $this->keycloakService->createUser($phone);
-            // Получаем токен для нового пользователя
-            $token = $this->keycloakService->getUserToken($phone);
-        } else {
-            // Пользователь уже существует, обновляем гостевой токен на пользовательский
-            $token = $this->keycloakService->upgradeGuestToUser($phone);
-        }
+            $result =  $this->keycloakService->createUser($phone);
 
+            // Назначаем роль user новому пользователю
+            $result =  $this->keycloakService->assignUserRole($phone, 'user');
+
+
+        } 
+        
+        // Пользователь уже существует, обновляем гостевой токен на пользовательский
+        $token = $this->keycloakService->upgradeGuestToUser($phone);
+        
         $status = 200;
         $responseJson = [
             'message' => 'Login successful', 

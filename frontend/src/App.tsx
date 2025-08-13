@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DemoTabs } from './components/DemoTabs';
+import { DemoButtons } from './components/DemoButtons';
 import { AuthModal } from './components/AuthModal';
 import { authService } from './services/authService';
 
@@ -57,6 +57,17 @@ const App: React.FC = () => {
     updateUserInfo();
   };
 
+  // Ref для доступа к DemoButtons
+  const demoButtonsRef = React.useRef<{ handleAuthSuccess: () => void }>(null);
+
+  // Функция для уведомления DemoButtons об успешной авторизации
+  const handleDemoButtonsAuthSuccess = () => {
+    // Вызываем функцию DemoButtons для перезапроса данных
+    if (demoButtonsRef.current) {
+      demoButtonsRef.current.handleAuthSuccess();
+    }
+  };
+
   if (!isInitialized) {
     return (
       <div style={{
@@ -75,7 +86,7 @@ const App: React.FC = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#f5f5f5',
+      backgroundColor: '#4f4f4f',
       padding: '2rem'
     }}>
       <div style={{
@@ -84,7 +95,7 @@ const App: React.FC = () => {
       }}>
         {/* Заголовок */}
         <header style={{
-          backgroundColor: 'white',
+          backgroundColor: '#2d2d2d',
           padding: '1.5rem',
           borderRadius: '8px',
           marginBottom: '2rem',
@@ -96,10 +107,10 @@ const App: React.FC = () => {
             alignItems: 'center'
           }}>
             <div>
-              <h1 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>
+              <h1 style={{ margin: '0 0 0.5rem 0', color: '#c1c1c1' }}>
                 Keycloak JWT Demo
               </h1>
-              <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>
+              <p style={{ margin: 0, color: '#c1c1c1', fontSize: '0.9rem' }}>
                 {userInfo}
               </p>
             </div>
@@ -108,27 +119,27 @@ const App: React.FC = () => {
                 onClick={() => setIsAuthModalOpen(true)}
                 style={{
                   padding: '0.5rem 1rem',
-                  backgroundColor: '#007bff',
-                  color: 'white',
+                  backgroundColor: 'rgb(14 18 22)',
+                  color: '#c1c1c1',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
                 }}
               >
-                Авторизация
+                Login
               </button>
               <button
                 onClick={handleLogout}
                 style={{
                   padding: '0.5rem 1rem',
                   backgroundColor: '#6c757d',
-                  color: 'white',
+                  color: '#c1c1c1',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
                 }}
               >
-                Выйти
+                Logout
               </button>
             </div>
           </div>
@@ -136,12 +147,17 @@ const App: React.FC = () => {
 
         {/* Основной контент */}
         <main style={{
-          backgroundColor: 'white',
+          backgroundColor: '#2d2d2d',
           borderRadius: '8px',
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          padding: '1rem'
         }}>
-          <DemoTabs onAuthRequired={handleAuthRequired} />
+          <DemoButtons 
+            ref={demoButtonsRef}
+            onAuthRequired={handleAuthRequired} 
+            onAuthSuccess={handleDemoButtonsAuthSuccess}
+          />
         </main>
 
         {/* Модальное окно авторизации */}

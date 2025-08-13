@@ -30,7 +30,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       setPhone(data.phone);
       setStep('code');
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Ошибка при запросе кода');
+      setError(error.response?.data?.message || 'Error requesting code');
     } finally {
       setLoading(false);
     }
@@ -48,7 +48,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       onSuccess();
       onClose();
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Неверный код');
+      setError(error.response?.data?.message || 'Invalid code');
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <h2 style={{ margin: 0 }}>
-            {step === 'phone' ? 'Авторизация' : 'Введите код'}
+            {step === 'phone' ? 'Authorization' : 'Enter code'}
           </h2>
           <button 
             onClick={handleClose}
@@ -124,10 +124,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 type="tel"
                 placeholder="+79123456789"
                 {...register('phone', {
-                  required: 'Номер телефона обязателен',
+                  required: 'Phone number is required',
                   pattern: {
                     value: /^\+7\d{10}$/,
-                    message: 'Введите номер в формате +79123456789'
+                    message: 'Enter number in format +79123456789'
                   }
                 })}
                 style={{
@@ -154,10 +154,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 type="text"
                 placeholder="123456"
                 {...register('code', {
-                  required: 'Код обязателен',
+                  required: 'Code is required',
                   minLength: {
                     value: 6,
-                    message: 'Код должен содержать 6 цифр'
+                    message: 'Code must contain 6 digits'
                   }
                 })}
                 style={{
@@ -191,7 +191,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   cursor: 'pointer'
                 }}
               >
-                Назад
+                Back
               </button>
             )}
             <button
@@ -207,7 +207,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 opacity: loading ? 0.7 : 1
               }}
             >
-              {loading ? 'Загрузка...' : (step === 'phone' ? 'Получить код' : 'Войти')}
+              {loading ? 'Loading...' : (step === 'phone' ? 'Get code' : 'Login')}
             </button>
           </div>
         </form>

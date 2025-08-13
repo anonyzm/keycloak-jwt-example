@@ -34,7 +34,7 @@ class KeycloakService
     // Создаем пользователя
     public function createUser($phone) 
     {
-        $token = $this->getServiceToken();
+        $token = $this->getAdminToken();
         $url = $this->keycloakUrl . '/admin/realms/' . $this->realm . '/users';
         
         $userId = 'user_' . str_replace('+', '', $phone);
@@ -60,14 +60,7 @@ class KeycloakService
             'Content-Type: application/json'
         ];
         
-        $result = $this->httpPost($url, $userData, $headers);
-        
-        // Назначаем роль user новому пользователю
-        if ($result === null || (is_array($result) && !isset($result['error']))) {
-            $this->assignUserRole($phone, 'user');
-        }
-        
-        return $result;
+        return $this->httpPost($url, $userData, $headers);
     }
     
     // Получаем токен для пользователя

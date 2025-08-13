@@ -63,7 +63,6 @@ services:
       - KEYCLOAK_REALM=myrealm
       - KEYCLOAK_CLIENT_ID=backend-client
       - KEYCLOAK_CLIENT_SECRET=your-client-secret
-    restart: unless-stopped
     depends_on:
       - init_permissions
       - keycloak

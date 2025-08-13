@@ -25,7 +25,13 @@ rebuild:
 	docker compose up -d
 
 logs:
-	docker compose logs -f backend
+	docker compose logs --tail 50 backend
+
+keycloak-logs:
+	docker compose logs --tail 50 keycloak
+
+envoy-logs:
+	docker compose logs --tail 50 envoy
 
 bash:
 	docker compose exec --user application backend bash

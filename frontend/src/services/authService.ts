@@ -1,9 +1,10 @@
-import axios, { AxiosResponse } from 'axios';
+import httpClient from './httpClient';
 
 export interface TokenResponse {
   access_token: string;
   expires_in: number;
   token_type: string;
+  refresh_token?: string; // Опциональный refresh_token
 }
 
 export interface AuthResponse {
@@ -29,52 +30,19 @@ export interface AuthRequest {
 }
 
 class AuthService {
-  private readonly API_BASE = 'http://localhost/api';
   private readonly TOKEN_KEY = 'jwt_token';
   private readonly TOKEN_EXPIRY_KEY = 'jwt_token_expiry';
+  private readonly REFRESH_TOKEN_KEY = 'jwt_refresh_token';
 
   constructor() {
-    // Настройка axios interceptor для автоматического добавления токена
-    axios.interceptors.request.use((config) => {
-      const token = this.getToken();
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    });
-
-    // Interceptor для обработки 401 ошибок (токен истек)
-    axios.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        if (error.response?.status === 401 && error.config && !error.config._retry) {
-          error.config._retry = true;
-          this.clearToken();
-          
-          // Попытка получить новый гостевой токен
-          try {
-            await this.getGuestToken();
-            // Повторяем оригинальный запрос с новым токеном
-            const originalRequest = error.config;
-            const token = this.getToken();
-            if (token) {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-              return axios.request(originalRequest);
-            }
-          } catch (refreshError) {
-            console.error('Failed to refresh token:', refreshError);
-          }
-        }
-        return Promise.reject(error);
-      }
-    );
+    // Убираем дублирующие interceptor'ы - они теперь только в httpClient.ts
   }
 
   // Получение гостевого токена
   async getGuestToken(): Promise<TokenResponse> {
     try {
-      const response: AxiosResponse<AuthResponse> = await axios.post(
-        `${this.API_BASE}/auth/guest-token`
+      const response: any = await httpClient.post(
+        `/auth/guest-token`
       );
       
       // Backend возвращает {message: "...", token: {...}}
@@ -90,7 +58,7 @@ class AuthService {
   // Запрос кода авторизации
   async requestCode(phone: string): Promise<any> {
     try {
-      const response = await axios.post(`${this.API_BASE}/auth/request-code`, {
+      const response = await httpClient.post(`/auth/request-code`, {
         phone
       });
       return response.data;
@@ -103,12 +71,12 @@ class AuthService {
   // Авторизация с кодом
   async login(phone: string, code: string): Promise<TokenResponse> {
     try {
-      const response: AxiosResponse<AuthResponse> = await axios.post(
-        `${this.API_BASE}/auth/login`,
+      const response: any = await httpClient.post(
+        `/auth/login`,
         { phone, code }
       );
       
-      // Backend возвращает {message: "...", token: {...}}
+      // Backend возвращает {message: "...", token:", {...}}
       const tokenData = response.data.token;
       this.saveToken(tokenData);
       return tokenData;
@@ -123,6 +91,11 @@ class AuthService {
     const expiryTime = Date.now() + (tokenData.expires_in * 1000);
     localStorage.setItem(this.TOKEN_KEY, tokenData.access_token);
     localStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
+    
+    // Сохраняем refresh_token, если он есть
+    if (tokenData.refresh_token) {
+      localStorage.setItem(this.REFRESH_TOKEN_KEY, tokenData.refresh_token);
+    }
   }
 
   // Получение токена из localStorage
@@ -143,10 +116,16 @@ class AuthService {
     return token;
   }
 
+  // Получение refresh_token из localStorage
+  getRefreshToken(): string | null {
+    return localStorage.getItem(this.REFRESH_TOKEN_KEY);
+  }
+
   // Очистка токена
   clearToken(): void {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
+    localStorage.removeItem(this.REFRESH_TOKEN_KEY);
   }
 
   // Проверка, авторизован ли пользователь
@@ -172,6 +151,47 @@ class AuthService {
         this.initialize().catch(console.error);
       }, 1000);
     }
+  }
+
+  // Принудительное обновление гостевого токена
+  async forceRefreshGuestToken(): Promise<TokenResponse> {
+    console.log('Force refreshing guest token...');
+    this.clearToken();
+    return await this.getGuestToken();
+  }
+
+  // Обновление токена с использованием refresh_token
+  async refreshToken(refreshToken: string): Promise<TokenResponse> {
+    try {
+      const response: any = await httpClient.post(
+        `/auth/refresh-token`,
+        { refresh_token: refreshToken }
+      );
+      
+      // Backend возвращает {message: "...", token: {...}}
+      const tokenData = response.data.token;
+      this.saveToken(tokenData);
+      return tokenData;
+    } catch (error) {
+      console.error('Failed to refresh token:', error);
+      throw error;
+    }
+  }
+
+  // Проверка валидности токена и обновление при необходимости
+  async ensureValidToken(): Promise<string | null> {
+    const token = this.getToken();
+    if (!token) {
+      console.log('No token found, getting new guest token...');
+      try {
+        const newToken = await this.getGuestToken();
+        return newToken.access_token;
+      } catch (error) {
+        console.error('Failed to get guest token:', error);
+        return null;
+      }
+    }
+    return token;
   }
 
   // Выход из системы
