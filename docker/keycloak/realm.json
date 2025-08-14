@@ -36,7 +36,8 @@
         "standardFlowEnabled": false,
         "implicitFlowEnabled": false,
         "attributes": {
-          "access.token.lifespan": "300"
+          "access.token.lifespan": "300",
+          "refresh.token.lifespan": "2592000"
         },
         "protocolMappers": [
           {

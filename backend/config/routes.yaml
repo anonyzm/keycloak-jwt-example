@@ -6,6 +6,14 @@ guest_token:
     defaults:
         _format: json
 
+# Обновление токена
+refresh_token:
+    path: /api/auth/refresh-token
+    controller: App\Controller\AuthController::refreshToken
+    methods: [POST]
+    defaults:
+        _format: json
+
 # Запрос кода
 request_code:
     path: /api/auth/request-code

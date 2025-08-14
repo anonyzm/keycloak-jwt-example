@@ -22,6 +22,10 @@ static_resources:
                 route:
                   cluster: backend
               - match:
+                  path: "/api/auth/refresh-token"
+                route:
+                  cluster: backend    
+              - match:
                   prefix: "/api/"
                 route:
                   cluster: backend

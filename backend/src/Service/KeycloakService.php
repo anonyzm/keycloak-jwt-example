@@ -207,6 +207,21 @@ class KeycloakService
         return $response['access_token'];
     }
 
+    // Обновляем токен с помощью refresh_token
+    public function refreshToken($refreshToken)
+    {
+        $url = $this->keycloakUrl . '/realms/' . $this->realm . '/protocol/openid-connect/token';
+        
+        $data = [
+            'grant_type' => 'refresh_token',
+            'client_id' => $this->clientId,
+            'client_secret' => $this->clientSecret,
+            'refresh_token' => $refreshToken
+        ];
+        
+        return $this->httpPost($url, $data);
+    }
+
     // --------------------private-methods--------------------
 
     private function trimPhone($phone)

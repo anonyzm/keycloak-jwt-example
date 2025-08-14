@@ -37,7 +37,43 @@ class AuthController
         $result = json_encode($responseJson); 
         return new Response($result, $status, ['Content-Type' => 'application/json']);
     }
-    
+
+    // Публичный эндпоинт - не требует роли
+    public function refreshToken(Request $request): Response
+    {
+        $requestBody = json_decode($request->getContent(), true);
+        $refreshToken = $requestBody['refresh_token'] ?? null;
+        
+        if (!$refreshToken) {
+            return new Response(
+                json_encode(['error' => 'refresh_token is required']),
+                400,
+                ['Content-Type' => 'application/json']
+            );
+        }
+        
+        $token = $this->keycloakService->refreshToken($refreshToken);
+        
+        $status = 200;
+        $responseJson = [
+            'message' => 'Token refreshed',
+        ];
+        
+        if (!empty($token['error'])) {
+            $status = 400;
+            $responseJson['error'] = $token['error'];
+            $responseJson['message'] = $token['error_description'] ?? 'Unknown error';
+        } else {
+            $responseJson['token'] = $token;
+        }
+        
+        return new Response(
+            json_encode($responseJson),
+            $status,
+            ['Content-Type' => 'application/json']
+        );
+    }
+        
     #[RequiresRole(['guest', 'user'])]
     public function requestCode(Request $request): Response
     {
