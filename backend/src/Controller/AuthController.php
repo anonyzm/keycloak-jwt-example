@@ -65,13 +65,10 @@ class AuthController
         // Проверяем существование пользователя
         if (!$this->keycloakService->userExists($phone)) {
             // Создаем при первом входе
-            $result =  $this->keycloakService->createUser($phone);
-
+            $this->keycloakService->createUser($phone);
             // Назначаем роль user новому пользователю
-            $result =  $this->keycloakService->assignUserRole($phone, 'user');
-
-
-        } 
+            $this->keycloakService->assignUserRole($phone, roleName: 'user');
+        }
         
         // Пользователь уже существует, обновляем гостевой токен на пользовательский
         $token = $this->keycloakService->upgradeGuestToUser($phone);

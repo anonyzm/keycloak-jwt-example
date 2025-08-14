@@ -20,6 +20,7 @@ class KeycloakService
     public function userExists($phone) 
     {
         $token = $this->getServiceToken();
+        $phone = $this->trimPhone($phone);
         $url = $this->keycloakUrl . '/admin/realms/' . $this->realm . '/users?username=' . urlencode($phone);
         
         $headers = [
@@ -37,7 +38,8 @@ class KeycloakService
         $token = $this->getAdminToken();
         $url = $this->keycloakUrl . '/admin/realms/' . $this->realm . '/users';
         
-        $userId = 'user_' . str_replace('+', '', $phone);
+        $phone = $this->trimPhone($phone);
+        $userId = 'user_' . $phone;
         
         $userData = [
             'username' => $phone,
@@ -67,7 +69,8 @@ class KeycloakService
     public function getUserToken($phone) 
     {
         $url = $this->keycloakUrl . '/realms/' . $this->realm . '/protocol/openid-connect/token';
-        
+        $phone = $this->trimPhone($phone);
+
         $data = [
             'grant_type' => 'password',
             'client_id' => $this->clientId,
@@ -98,20 +101,26 @@ class KeycloakService
     }
 
     // Назначаем роль пользователю
-    public function assignUserRole($username, $roleName)
+    public function assignUserRole($phone, $roleName)
     {
         $token = $this->getServiceToken();
-        
+        $phone = $this->trimPhone($phone);
+
         // Получаем ID пользователя
-        $userId = $this->getUserId($username, $token);
+        $userId = $this->getUserId($phone, $token);
         if (!$userId) {
             return ['error' => 'User not found'];
         }
         
         // Получаем роль
         $role = $this->getRole($roleName, $token);
-        if (!$role) {
-            return ['error' => 'Role not found'];
+        if (!$role || isset($role['error'])) {
+            return ['error' => 'Role not found: ' . $roleName];
+        }
+        
+        // Проверяем, что роль имеет правильную структуру
+        if (!isset($role['id']) || !isset($role['name'])) {
+            return ['error' => 'Invalid role structure'];
         }
         
         // Назначаем роль
@@ -122,13 +131,14 @@ class KeycloakService
             'Content-Type: application/json'
         ];
         
-        return $this->httpPost($url, json_encode([$role]), $headers);
+        return $this->httpPost($url, [$role], $headers);
     }
 
     // Обновляем роль пользователя с guest на user (для существующего пользователя)
     public function upgradeGuestToUser($phone)
     {
         $token = $this->getServiceToken();
+        $phone = $this->trimPhone($phone);
         
         // Получаем ID пользователя по телефону
         $userId = $this->getUserId($phone, $token);
@@ -154,7 +164,7 @@ class KeycloakService
         ];
         
         // Обновляем атрибуты пользователя
-        $this->httpPut($url, json_encode($userData), $headers);
+        $this->httpPut($url, $userData, $headers);
         
         // Удаляем роль guest, если она есть
         $this->removeUserRole($phone, 'guest');
@@ -165,12 +175,9 @@ class KeycloakService
         // Получаем новый токен для обновленного пользователя
         return $this->getUserToken($phone);
     }
-
-
-    // --------------------private-methods--------------------
-
+    
     // Получаем токен для сервисного аккаунта
-    private function getServiceToken() 
+    public function getServiceToken() 
     {
         $url = $this->keycloakUrl . '/realms/' . $this->realm . '/protocol/openid-connect/token';
         
@@ -184,6 +191,7 @@ class KeycloakService
         return $response['access_token'];
     }
     
+    // Получаем токен для админа
     public function getAdminToken() 
     {
         $url = $this->keycloakUrl . '/realms/master/protocol/openid-connect/token';
@@ -198,11 +206,19 @@ class KeycloakService
         $response = $this->httpPost($url, $data);
         return $response['access_token'];
     }
-        
-    // Получаем ID пользователя по имени
-    private function getUserId($username, $token)
+
+    // --------------------private-methods--------------------
+
+    private function trimPhone($phone)
     {
-        $url = $this->keycloakUrl . '/admin/realms/' . $this->realm . '/users?username=' . urlencode($username);
+        return trim(str_replace('+', '', $phone));
+    }
+    
+    // Получаем ID пользователя по имени
+    private function getUserId($phone, $token)
+    {
+        $phone = $this->trimPhone($phone);
+        $url = $this->keycloakUrl . '/admin/realms/' . $this->realm . '/users?username=' . urlencode($phone);
         
         $headers = [
             'Authorization: Bearer ' . $token,
@@ -214,23 +230,49 @@ class KeycloakService
     }
 
     // Получаем роль по имени
-    private function getRole($roleName, $token)
+    private function getRoles($token)
     {
-        $url = $this->keycloakUrl . '/admin/realms/' . $this->realm . '/roles/' . $roleName;
+        $url = $this->keycloakUrl . '/admin/realms/' . $this->realm . '/roles';
         
         $headers = [
             'Authorization: Bearer ' . $token,
             'Content-Type: application/json'
         ];
         
-        return $this->httpGet($url, $headers);
+        $response = $this->httpGet($url, $headers);
+        
+        return $response;
+    }
+
+    private function getRole($roleName, $token) 
+    {
+        $role = null;
+        $roles = $this->getRoles($token);
+        foreach ($roles as $item) {
+            if ($item['name'] === $roleName) {
+                $role = $item;
+            }
+        }
+
+         // Проверяем, что ответ не содержит ошибку
+         if (isset($role['error'])) {
+            return ['error' => 'Role not found: ' . $roleName];
+        }
+        
+        // Проверяем, что роль имеет необходимые поля
+        if (!$role || !isset($role['id']) || !isset($role['name'])) {
+            return ['error' => 'Invalid role data'];
+        }
+
+        return $role;
     }
 
     // Удаляем роль у пользователя
-    private function removeUserRole($username, $roleName)
+    private function removeUserRole($phone, $roleName)
     {
         $token = $this->getServiceToken();
-        $userId = $this->getUserId($username, $token);
+        $phone = $this->trimPhone($phone);
+        $userId = $this->getUserId($phone, $token);
         $role = $this->getRole($roleName, $token);
         
         if (!$userId || !$role) {
@@ -247,13 +289,30 @@ class KeycloakService
         return $this->httpDelete($url, json_encode([$role]), $headers);
     }
 
+    // ---------------------http-methods--------------------
+    // TODO: ЗАМЕНИТЬ НА GUZZLE
+
     // HTTP-клиент
     private function httpPost($url, $data, $headers = []) 
     {
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, is_array($data) ? http_build_query($data) : $data);
+        
+        // Проверяем, нужно ли отправлять как JSON
+        $isJsonRequest = false;
+        foreach ($headers as $header) {
+            if (strpos($header, 'Content-Type: application/json') !== false) {
+                $isJsonRequest = true;
+                break;
+            }
+        }
+        
+        if ($isJsonRequest && is_array($data)) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        } else {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, is_array($data) ? http_build_query($data) : $data);
+        }
         
         if (!empty($headers)) {
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -281,7 +340,21 @@ class KeycloakService
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        
+        // Проверяем, нужно ли отправлять как JSON
+        $isJsonRequest = false;
+        foreach ($headers as $header) {
+            if (strpos($header, 'Content-Type: application/json') !== false) {
+                $isJsonRequest = true;
+                break;
+            }
+        }
+        
+        if ($isJsonRequest && is_array($data)) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        } else {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        }
         
         if (!empty($headers)) {
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -298,7 +371,20 @@ class KeycloakService
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
         
         if ($data) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+            // Проверяем, нужно ли отправлять как JSON
+            $isJsonRequest = false;
+            foreach ($headers as $header) {
+                if (strpos($header, 'Content-Type: application/json') !== false) {
+                    $isJsonRequest = true;
+                    break;
+                }
+            }
+            
+            if ($isJsonRequest && is_array($data)) {
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+            } else {
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+            }
         }
         
         if (!empty($headers)) {
